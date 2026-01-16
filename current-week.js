@@ -1,4 +1,4 @@
-// Auto-generated from Power BI
+// Auto-generated from Power BI 
 // Last updated: 2026-01-16T21:53:02.3136753Z
 
 const CURRENT_WEEK_DATA = {
