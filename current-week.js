@@ -14,7 +14,7 @@ const CURRENT_WEEK_DATA = {
     },
     cmmc: {
         'All': {
-            totalApplications: 400,  // Replace with actual data
+            totalApplications: 400,
             missingMandatory: 150,
             missingQuality: 180,
             missingApprovals: 160,
@@ -23,7 +23,7 @@ const CURRENT_WEEK_DATA = {
     },
     noncmmc: {
         'All': {
-            totalApplications: 419,  // Replace with actual data
+            totalApplications: 419,
             missingMandatory: 196,
             missingQuality: 205,
             missingApprovals: 205,
