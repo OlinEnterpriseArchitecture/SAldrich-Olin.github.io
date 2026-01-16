@@ -30,10 +30,20 @@ jobs:
           
           // Read and execute current-week.js
           const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
+          console.log('================================================');
+          console.log('RAW current-week.js content:');
+          console.log(currentWeekContent);
+          console.log('================================================');
+          
           const currentWeekContext = {};
           vm.createContext(currentWeekContext);
           vm.runInContext(currentWeekContent, currentWeekContext);
           const CURRENT_WEEK_DATA = currentWeekContext.CURRENT_WEEK_DATA;
+          
+          console.log('================================================');
+          console.log('PARSED CURRENT_WEEK_DATA:');
+          console.log(JSON.stringify(CURRENT_WEEK_DATA, null, 2));
+          console.log('================================================');
           
           // Read and execute data.js with error handling
           let ORG_DATA, ORG_DATA_CMMC, ORG_DATA_NONCMMC;
@@ -144,17 +154,26 @@ jobs:
           console.log('Cutoff: Friday at ' + CUTOFF_HOUR + ':00 UTC');
           console.log('================================================');
           
+          console.log('Checking CURRENT_WEEK_DATA.all:', !!CURRENT_WEEK_DATA?.all);
+          console.log('Checking CURRENT_WEEK_DATA.all.All:', !!CURRENT_WEEK_DATA?.all?.All);
+          
           if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.all && CURRENT_WEEK_DATA.all['All']) {
             updateWeekData(ORG_DATA, CURRENT_WEEK_DATA.all['All'], 'All Applications');
           } else {
             console.log('WARNING: All Applications - No data in current-week.js');
           }
           
+          console.log('Checking CURRENT_WEEK_DATA.cmmc:', !!CURRENT_WEEK_DATA?.cmmc);
+          console.log('Checking CURRENT_WEEK_DATA.cmmc.All:', !!CURRENT_WEEK_DATA?.cmmc?.All);
+          
           if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.cmmc && CURRENT_WEEK_DATA.cmmc['All']) {
             updateWeekData(ORG_DATA_CMMC, CURRENT_WEEK_DATA.cmmc['All'], 'CMMC Applications');
           } else {
             console.log('WARNING: CMMC Applications - No data in current-week.js');
           }
+          
+          console.log('Checking CURRENT_WEEK_DATA.noncmmc:', !!CURRENT_WEEK_DATA?.noncmmc);
+          console.log('Checking CURRENT_WEEK_DATA.noncmmc.All:', !!CURRENT_WEEK_DATA?.noncmmc?.All);
           
           if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.noncmmc && CURRENT_WEEK_DATA.noncmmc['All']) {
             updateWeekData(ORG_DATA_NONCMMC, CURRENT_WEEK_DATA.noncmmc['All'], 'Non-CMMC Applications');
