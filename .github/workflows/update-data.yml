@@ -42,24 +42,20 @@ jobs:
             process.exit(1);
           }
           
-          // Read existing data.js
-          let ORG_DATA, ORG_DATA_CMMC, ORG_DATA_NONCMMC;
+          // Read existing data.js and PRESERVE everything
+          let ORG_DATA = {};
+          let ORG_DATA_CMMC = {};
+          let ORG_DATA_NONCMMC = {};
+          
           try {
             const dataContent = fs.readFileSync('data.js', 'utf8');
             eval(dataContent);
+            console.log('Successfully loaded existing data.js');
+            console.log('ORG_DATA has ' + Object.keys(ORG_DATA).length + ' organizations');
+            console.log('ORG_DATA_CMMC has ' + Object.keys(ORG_DATA_CMMC).length + ' organizations');
+            console.log('ORG_DATA_NONCMMC has ' + Object.keys(ORG_DATA_NONCMMC).length + ' organizations');
           } catch (error) {
             console.log('WARNING: Could not read existing data.js, initializing new structure');
-          }
-          
-          // Initialize if undefined
-          if (!ORG_DATA || typeof ORG_DATA !== 'object') {
-            ORG_DATA = {};
-          }
-          if (!ORG_DATA_CMMC || typeof ORG_DATA_CMMC !== 'object') {
-            ORG_DATA_CMMC = {};
-          }
-          if (!ORG_DATA_NONCMMC || typeof ORG_DATA_NONCMMC !== 'object') {
-            ORG_DATA_NONCMMC = {};
           }
           
           function getTargetWeekDate(nowDate) {
@@ -102,8 +98,20 @@ jobs:
               }
               
               // PRESERVE existing startDate and targetDate
-              // Don't overwrite them - user can manually edit these in data.js
+              // If they don't exist, use defaults
+              if (!dataset[orgName].startDate) {
+                dataset[orgName].startDate = DEFAULT_START_DATE;
+              }
+              if (!dataset[orgName].targetDate) {
+                dataset[orgName].targetDate = DEFAULT_TARGET_DATE;
+              }
               
+              // PRESERVE existing weeklyProgress array
+              if (!dataset[orgName].weeklyProgress) {
+                dataset[orgName].weeklyProgress = [];
+              }
+              
+              // Find if this week already exists
               const weekIndex = dataset[orgName].weeklyProgress.findIndex(w => w.date === targetWeek);
               
               const newWeekData = {
@@ -116,13 +124,16 @@ jobs:
               };
               
               if (weekIndex !== -1) {
+                // Update existing week
                 dataset[orgName].weeklyProgress[weekIndex] = newWeekData;
                 console.log('UPDATED: ' + datasetName + ' / ' + orgName + ' week ' + targetWeek);
               } else {
+                // Add new week
                 dataset[orgName].weeklyProgress.push(newWeekData);
                 console.log('ADDED: ' + datasetName + ' / ' + orgName + ' week ' + targetWeek);
               }
               
+              // Sort by date
               dataset[orgName].weeklyProgress.sort((a, b) => 
                 new Date(a.date) - new Date(b.date)
               );
@@ -149,7 +160,7 @@ jobs:
             const spaces = ' '.repeat(indent);
             let result = '{\n';
             
-            const keys = Object.keys(obj);
+            const keys = Object.keys(obj).sort();
             keys.forEach((key, index) => {
               result += spaces + "'" + key + "': {\n";
               result += spaces + '    startDate: \'' + obj[key].startDate + '\',\n';
@@ -196,6 +207,9 @@ jobs:
           
           console.log('================================================');
           console.log('SUCCESS: data.js updated successfully');
+          console.log('All organizations preserved: ' + Object.keys(ORG_DATA).length + ' (All)');
+          console.log('All organizations preserved: ' + Object.keys(ORG_DATA_CMMC).length + ' (CMMC)');
+          console.log('All organizations preserved: ' + Object.keys(ORG_DATA_NONCMMC).length + ' (Non-CMMC)');
           console.log('================================================');
           EOF
           
