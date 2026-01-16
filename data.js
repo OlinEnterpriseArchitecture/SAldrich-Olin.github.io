@@ -1,7 +1,7 @@
 // Application Completion Tracking Data
-// Last updated: 2026-01-16T22:49:08.828Z
-// Target week: 2026-01-23
-// Cutoff: Friday at 17:00 UTC
+// Last updated: 2026-01-16T22:53:52.928Z
+// Target week: 2026-01-16
+// Cutoff: Friday at 23:00 UTC
 
 // All Applications (CMMC + Non-CMMC)
 const ORG_DATA = {
@@ -24,6 +24,14 @@ const ORG_DATA = {
                 missingQuality: 405,
                 missingApprovals: 372,
                 missingSurveys: 459
+            },
+            {
+                date: '2026-01-16',
+                totalApplications: 819,
+                missingMandatory: 346,
+                missingQuality: 385,
+                missingApprovals: 365,
+                missingSurveys: 403
             }
         ]
     }
@@ -50,6 +58,14 @@ const ORG_DATA_CMMC = {
                 missingQuality: 77,
                 missingApprovals: 69,
                 missingSurveys: 67
+            },
+            {
+                date: '2026-01-16',
+                totalApplications: 400,
+                missingMandatory: 150,
+                missingQuality: 180,
+                missingApprovals: 160,
+                missingSurveys: 200
             }
         ]
     }
@@ -76,6 +92,14 @@ const ORG_DATA_NONCMMC = {
                 missingQuality: 328,
                 missingApprovals: 303,
                 missingSurveys: 392
+            },
+            {
+                date: '2026-01-16',
+                totalApplications: 419,
+                missingMandatory: 196,
+                missingQuality: 205,
+                missingApprovals: 205,
+                missingSurveys: 203
             }
         ]
     }
