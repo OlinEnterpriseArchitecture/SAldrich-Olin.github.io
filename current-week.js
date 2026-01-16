@@ -1,8 +1,8 @@
 // Auto-generated from Power BI
-// Last updated: 2026-01-16T21:18:29.1064890Z
+// Last updated: 2026-01-16T21:22:34.6140447Z
 
 const CURRENT_WEEK_DATA = {
-    date: "2026-01-16T21:18:29.1064928Z",  // Closest Friday
+    date: "2026-01-16T21:22:34.6140784Z",  // Closest Friday
     all: {
         'All': {
             totalApplications: 819,
