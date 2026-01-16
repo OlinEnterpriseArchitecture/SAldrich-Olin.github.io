@@ -1,0 +1,112 @@
+name: Update data.js with current week
+
+on:
+  push:
+    paths:
+      - 'current-week.js'
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Append or update current week in data.js
+        run: |
+          node << 'EOF'
+          const fs = require('fs');
+          
+          // Configuration
+          const CUTOFF_HOUR = 17; // 5 PM (24-hour format)
+          const CUTOFF_DAY = 5; // Friday (0=Sunday, 5=Friday)
+          
+          // Read current-week.js
+          const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
+          eval(currentWeekContent);
+          
+          // Read data.js
+          const dataContent = fs.readFileSync('data.js', 'utf8');
+          eval(dataContent);
+          
+          // Function to get the target week date (closest Friday)
+          function getTargetWeekDate(nowDate) {
+            const date = new Date(nowDate);
+            const dayOfWeek = date.getDay();
+            const hour = date.getHours();
+            
+            // If it's Friday after cutoff time, target next Friday
+            if (dayOfWeek === CUTOFF_DAY && hour >= CUTOFF_HOUR) {
+              const nextFriday = new Date(date);
+              nextFriday.setDate(date.getDate() + 7);
+              return nextFriday.toISOString().split('T')[0];
+            }
+            
+            // Otherwise, target this week's Friday
+            const daysUntilFriday = (CUTOFF_DAY - dayOfWeek + 7) % 7;
+            const thisFriday = new Date(date);
+            thisFriday.setDate(date.getDate() + (daysUntilFriday === 0 ? 0 : daysUntilFriday));
+            return thisFriday.toISOString().split('T')[0];
+          }
+          
+          // Get current timestamp
+          const now = new Date();
+          const targetWeek = getTargetWeekDate(now);
+          
+          console.log(`📅 Current time: ${now.toISOString()}`);
+          console.log(`🎯 Target week date: ${targetWeek}`);
+          
+          // Find if this week already exists
+          const weekIndex = ORG_DATA['All'].weeklyProgress.findIndex(w => w.date === targetWeek);
+          
+          const newWeekData = {
+            date: targetWeek,
+            totalApplications: CURRENT_WEEK_DATA.all['All'].totalApplications,
+            missingMandatory: CURRENT_WEEK_DATA.all['All'].missingMandatory,
+            missingQuality: CURRENT_WEEK_DATA.all['All'].missingQuality,
+            missingApprovals: CURRENT_WEEK_DATA.all['All'].missingApprovals,
+            missingSurveys: CURRENT_WEEK_DATA.all['All'].missingSurveys
+          };
+          
+          if (weekIndex !== -1) {
+            // Week exists - overwrite it
+            ORG_DATA['All'].weeklyProgress[weekIndex] = newWeekData;
+            console.log(`🔄 Updated existing week: ${targetWeek}`);
+          } else {
+            // New week - append it
+            ORG_DATA['All'].weeklyProgress.push(newWeekData);
+            console.log(`✅ Added new week: ${targetWeek}`);
+          }
+          
+          // Sort by date
+          ORG_DATA['All'].weeklyProgress.sort((a, b) => 
+            new Date(a.date) - new Date(b.date)
+          );
+          
+          // Write updated data.js
+          const output = `// Application Completion Tracking Data
+// Last updated: ${now.toISOString()}
+// Next week starts: Friday ${now.getDay() === 5 && now.getHours() >= ${CUTOFF_HOUR} ? 'today' : 'this week'} at ${CUTOFF_HOUR}:00
+
+const ORG_DATA = ${JSON.stringify(ORG_DATA, null, 4)};
+`;
+          
+          fs.writeFileSync('data.js', output, 'utf8');
+          console.log('✅ data.js updated successfully');
+          EOF
+          
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add data.js
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update data.js [${date}]" && git push)
+        env:
+          date: ${{ github.event.head_commit.timestamp }}
