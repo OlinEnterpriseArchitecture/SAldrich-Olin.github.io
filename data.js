@@ -40,6 +40,14 @@ const ORG_DATA = {
                 missingQuality: 45,
                 missingApprovals: 57,
                 missingSurveys: 67
+            },
+            {
+                date: '2026-01-16',
+                totalApplications: 83,
+                missingMandatory: 37,
+                missingQuality: 41,
+                missingApprovals: 53,
+                missingSurveys: 61
             }
         ]
     },
@@ -667,4 +675,5 @@ const ORG_DATA_NONCMMC = {
             }
         ]
     }
+
 };
