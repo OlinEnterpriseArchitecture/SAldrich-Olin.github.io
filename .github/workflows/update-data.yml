@@ -24,9 +24,15 @@ jobs:
           node << 'EOF'
           const fs = require('fs');
           
-          // Configuration
-          const CUTOFF_HOUR = 17; // 5 PM (24-hour format)
-          const CUTOFF_DAY = 5; // Friday (0=Sunday, 5=Friday)
+          // ============================================
+          // CONFIGURATION
+          // ============================================
+          const CUTOFF_HOUR = 17; // 5 PM (24-hour format, UTC)
+          const CUTOFF_DAY = 5;   // Friday (0=Sunday, 5=Friday)
+          
+          // ============================================
+          // READ FILES
+          // ============================================
           
           // Read current-week.js
           const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
@@ -36,70 +42,151 @@ jobs:
           const dataContent = fs.readFileSync('data.js', 'utf8');
           eval(dataContent);
           
-          // Function to get the target week date (closest Friday)
+          // ============================================
+          // HELPER FUNCTIONS
+          // ============================================
+          
+          // Get the target week date (closest Friday)
           function getTargetWeekDate(nowDate) {
             const date = new Date(nowDate);
-            const dayOfWeek = date.getDay();
-            const hour = date.getHours();
+            const dayOfWeek = date.getUTCDay();
+            const hour = date.getUTCHours();
             
             // If it's Friday after cutoff time, target next Friday
             if (dayOfWeek === CUTOFF_DAY && hour >= CUTOFF_HOUR) {
               const nextFriday = new Date(date);
-              nextFriday.setDate(date.getDate() + 7);
+              nextFriday.setUTCDate(date.getUTCDate() + 7);
               return nextFriday.toISOString().split('T')[0];
             }
             
             // Otherwise, target this week's Friday
-            const daysUntilFriday = (CUTOFF_DAY - dayOfWeek + 7) % 7;
+            let daysUntilFriday = (CUTOFF_DAY - dayOfWeek + 7) % 7;
+            
+            // If today is Friday but before cutoff, target today
+            if (daysUntilFriday === 0 && dayOfWeek === CUTOFF_DAY) {
+              daysUntilFriday = 0;
+            }
+            
             const thisFriday = new Date(date);
-            thisFriday.setDate(date.getDate() + (daysUntilFriday === 0 ? 0 : daysUntilFriday));
+            thisFriday.setUTCDate(date.getUTCDate() + daysUntilFriday);
             return thisFriday.toISOString().split('T')[0];
           }
           
-          // Get current timestamp
+          // Update a specific dataset
+          function updateWeekData(dataset, currentData, datasetName) {
+            if (!dataset || !dataset['All'] || !dataset['All'].weeklyProgress) {
+              console.log(`⚠️  ${datasetName}: Dataset structure invalid, skipping...`);
+              return;
+            }
+            
+            if (!currentData) {
+              console.log(`⚠️  ${datasetName}: No current week data found, skipping...`);
+              return;
+            }
+            
+            const weekIndex = dataset['All'].weeklyProgress.findIndex(w => w.date === targetWeek);
+            
+            const newWeekData = {
+              date: targetWeek,
+              totalApplications: currentData.totalApplications || 0,
+              missingMandatory: currentData.missingMandatory || 0,
+              missingQuality: currentData.missingQuality || 0,
+              missingApprovals: currentData.missingApprovals || 0,
+              missingSurveys: currentData.missingSurveys || 0
+            };
+            
+            if (weekIndex !== -1) {
+              // Week exists - overwrite it
+              dataset['All'].weeklyProgress[weekIndex] = newWeekData;
+              console.log(`🔄 ${datasetName}: Updated existing week ${targetWeek}`);
+            } else {
+              // New week - append it
+              dataset['All'].weeklyProgress.push(newWeekData);
+              console.log(`✅ ${datasetName}: Added new week ${targetWeek}`);
+            }
+            
+            // Sort by date (oldest to newest)
+            dataset['All'].weeklyProgress.sort((a, b) => 
+              new Date(a.date) - new Date(b.date)
+            );
+          }
+          
+          // ============================================
+          // MAIN LOGIC
+          // ============================================
+          
           const now = new Date();
           const targetWeek = getTargetWeekDate(now);
           
-          console.log(`📅 Current time: ${now.toISOString()}`);
+          console.log('================================================');
+          console.log(`📅 Current UTC time: ${now.toISOString()}`);
           console.log(`🎯 Target week date: ${targetWeek}`);
+          console.log(`⏰ Cutoff: Friday at ${CUTOFF_HOUR}:00 UTC`);
+          console.log('================================================\n');
           
-          // Find if this week already exists
-          const weekIndex = ORG_DATA['All'].weeklyProgress.findIndex(w => w.date === targetWeek);
-          
-          const newWeekData = {
-            date: targetWeek,
-            totalApplications: CURRENT_WEEK_DATA.all['All'].totalApplications,
-            missingMandatory: CURRENT_WEEK_DATA.all['All'].missingMandatory,
-            missingQuality: CURRENT_WEEK_DATA.all['All'].missingQuality,
-            missingApprovals: CURRENT_WEEK_DATA.all['All'].missingApprovals,
-            missingSurveys: CURRENT_WEEK_DATA.all['All'].missingSurveys
-          };
-          
-          if (weekIndex !== -1) {
-            // Week exists - overwrite it
-            ORG_DATA['All'].weeklyProgress[weekIndex] = newWeekData;
-            console.log(`🔄 Updated existing week: ${targetWeek}`);
+          // Update All Applications
+          if (CURRENT_WEEK_DATA.all && CURRENT_WEEK_DATA.all['All']) {
+            updateWeekData(ORG_DATA, CURRENT_WEEK_DATA.all['All'], 'All Applications');
           } else {
-            // New week - append it
-            ORG_DATA['All'].weeklyProgress.push(newWeekData);
-            console.log(`✅ Added new week: ${targetWeek}`);
+            console.log('⚠️  All Applications: No data in current-week.js');
           }
           
-          // Sort by date
-          ORG_DATA['All'].weeklyProgress.sort((a, b) => 
-            new Date(a.date) - new Date(b.date)
-          );
+          // Update CMMC Applications
+          if (CURRENT_WEEK_DATA.cmmc && CURRENT_WEEK_DATA.cmmc['All']) {
+            if (typeof ORG_DATA_CMMC !== 'undefined') {
+              updateWeekData(ORG_DATA_CMMC, CURRENT_WEEK_DATA.cmmc['All'], 'CMMC Applications');
+            } else {
+              console.log('⚠️  CMMC Applications: ORG_DATA_CMMC not defined in data.js');
+            }
+          } else {
+            console.log('⚠️  CMMC Applications: No data in current-week.js');
+          }
           
-          // Write updated data.js
-          const output = `// Application Completion Tracking Data
+          // Update Non-CMMC Applications
+          if (CURRENT_WEEK_DATA.noncmmc && CURRENT_WEEK_DATA.noncmmc['All']) {
+            if (typeof ORG_DATA_NONCMMC !== 'undefined') {
+              updateWeekData(ORG_DATA_NONCMMC, CURRENT_WEEK_DATA.noncmmc['All'], 'Non-CMMC Applications');
+            } else {
+              console.log('⚠️  Non-CMMC Applications: ORG_DATA_NONCMMC not defined in data.js');
+            }
+          } else {
+            console.log('⚠️  Non-CMMC Applications: No data in current-week.js');
+          }
+          
+          // ============================================
+          // WRITE OUTPUT
+          // ============================================
+          
+          let output = `// Application Completion Tracking Data
 // Last updated: ${now.toISOString()}
-// Next week starts: Friday ${now.getDay() === 5 && now.getHours() >= ${CUTOFF_HOUR} ? 'today' : 'this week'} at ${CUTOFF_HOUR}:00
+// Target week: ${targetWeek}
+// Cutoff: Friday at ${CUTOFF_HOUR}:00 UTC
 
+// All Applications (CMMC + Non-CMMC)
 const ORG_DATA = ${JSON.stringify(ORG_DATA, null, 4)};
 `;
           
+          // Add CMMC data if it exists
+          if (typeof ORG_DATA_CMMC !== 'undefined') {
+            output += `
+// CMMC Applications Data
+const ORG_DATA_CMMC = ${JSON.stringify(ORG_DATA_CMMC, null, 4)};
+`;
+          }
+          
+          // Add Non-CMMC data if it exists
+          if (typeof ORG_DATA_NONCMMC !== 'undefined') {
+            output += `
+// Non-CMMC Applications Data
+const ORG_DATA_NONCMMC = ${JSON.stringify(ORG_DATA_NONCMMC, null, 4)};
+`;
+          }
+          
           fs.writeFileSync('data.js', output, 'utf8');
+          
+          console.log('\n================================================');
           console.log('✅ data.js updated successfully');
+          console.log('================================================');
           EOF
           
       - name: Commit and push if changed
@@ -107,6 +194,13 @@ const ORG_DATA = ${JSON.stringify(ORG_DATA, null, 4)};
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add data.js
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update data.js [${date}]" && git push)
-        env:
-          date: ${{ github.event.head_commit.timestamp }}
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            git commit -m "Auto-update data.js - $TIMESTAMP"
+            git push
+            echo "✅ Changes committed and pushed"
+          fi
