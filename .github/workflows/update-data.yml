@@ -24,8 +24,8 @@ jobs:
           node << 'EOF'
           const fs = require('fs');
           
-          const CUTOFF_HOUR = 17;
-          const CUTOFF_DAY = 5;
+          const CUTOFF_HOUR = 23;  // 11 PM UTC = 5 PM CST
+          const CUTOFF_DAY = 5;    // Friday
           
           // Default dates (used only for NEW organizations)
           const DEFAULT_START_DATE = '2026-01-02';
