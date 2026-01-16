@@ -33,29 +33,35 @@ jobs:
           
           // Read current-week.js
           const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
-          let CURRENT_WEEK_DATA;
-          try {
-            const wrappedCode = currentWeekContent + '\nCURRENT_WEEK_DATA;';
-            CURRENT_WEEK_DATA = eval(wrappedCode);
-          } catch (error) {
-            console.log('ERROR parsing current-week.js:', error.message);
-            process.exit(1);
-          }
+          const CURRENT_WEEK_DATA = Function(currentWeekContent + '\nreturn CURRENT_WEEK_DATA;')();
           
-          // Read existing data.js and PRESERVE everything
+          // Read and parse existing data.js properly
           let ORG_DATA = {};
           let ORG_DATA_CMMC = {};
           let ORG_DATA_NONCMMC = {};
           
           try {
             const dataContent = fs.readFileSync('data.js', 'utf8');
-            eval(dataContent);
+            
+            // Execute in a way that captures the variables
+            const result = Function(dataContent + '\nreturn { ORG_DATA, ORG_DATA_CMMC, ORG_DATA_NONCMMC };')();
+            
+            ORG_DATA = result.ORG_DATA || {};
+            ORG_DATA_CMMC = result.ORG_DATA_CMMC || {};
+            ORG_DATA_NONCMMC = result.ORG_DATA_NONCMMC || {};
+            
             console.log('Successfully loaded existing data.js');
             console.log('ORG_DATA has ' + Object.keys(ORG_DATA).length + ' organizations');
             console.log('ORG_DATA_CMMC has ' + Object.keys(ORG_DATA_CMMC).length + ' organizations');
             console.log('ORG_DATA_NONCMMC has ' + Object.keys(ORG_DATA_NONCMMC).length + ' organizations');
+            
+            // Show sample of what was loaded
+            if (ORG_DATA['All'] && ORG_DATA['All'].weeklyProgress) {
+              console.log('ORG_DATA[All] has ' + ORG_DATA['All'].weeklyProgress.length + ' weeks of data');
+            }
           } catch (error) {
-            console.log('WARNING: Could not read existing data.js, initializing new structure');
+            console.log('WARNING: Could not read existing data.js:', error.message);
+            console.log('Initializing new structure');
           }
           
           function getTargetWeekDate(nowDate) {
@@ -98,7 +104,6 @@ jobs:
               }
               
               // PRESERVE existing startDate and targetDate
-              // If they don't exist, use defaults
               if (!dataset[orgName].startDate) {
                 dataset[orgName].startDate = DEFAULT_START_DATE;
               }
@@ -110,6 +115,9 @@ jobs:
               if (!dataset[orgName].weeklyProgress) {
                 dataset[orgName].weeklyProgress = [];
               }
+              
+              // Log what we have before update
+              console.log(datasetName + ' / ' + orgName + ' currently has ' + dataset[orgName].weeklyProgress.length + ' weeks');
               
               // Find if this week already exists
               const weekIndex = dataset[orgName].weeklyProgress.findIndex(w => w.date === targetWeek);
@@ -137,6 +145,8 @@ jobs:
               dataset[orgName].weeklyProgress.sort((a, b) => 
                 new Date(a.date) - new Date(b.date)
               );
+              
+              console.log(datasetName + ' / ' + orgName + ' now has ' + dataset[orgName].weeklyProgress.length + ' weeks');
             }
           }
           
@@ -207,9 +217,9 @@ jobs:
           
           console.log('================================================');
           console.log('SUCCESS: data.js updated successfully');
-          console.log('All organizations preserved: ' + Object.keys(ORG_DATA).length + ' (All)');
-          console.log('All organizations preserved: ' + Object.keys(ORG_DATA_CMMC).length + ' (CMMC)');
-          console.log('All organizations preserved: ' + Object.keys(ORG_DATA_NONCMMC).length + ' (Non-CMMC)');
+          console.log('Final org count: ' + Object.keys(ORG_DATA).length + ' (All)');
+          console.log('Final org count: ' + Object.keys(ORG_DATA_CMMC).length + ' (CMMC)');
+          console.log('Final org count: ' + Object.keys(ORG_DATA_NONCMMC).length + ' (Non-CMMC)');
           console.log('================================================');
           EOF
           
