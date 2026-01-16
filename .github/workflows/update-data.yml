@@ -28,21 +28,55 @@ jobs:
           const CUTOFF_HOUR = 17;
           const CUTOFF_DAY = 5;
           
-          // Read and execute current-week.js in a proper context
+          // Read and execute current-week.js
           const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
           const currentWeekContext = {};
           vm.createContext(currentWeekContext);
           vm.runInContext(currentWeekContent, currentWeekContext);
           const CURRENT_WEEK_DATA = currentWeekContext.CURRENT_WEEK_DATA;
           
-          // Read and execute data.js in a proper context
-          const dataContent = fs.readFileSync('data.js', 'utf8');
-          const dataContext = {};
-          vm.createContext(dataContext);
-          vm.runInContext(dataContent, dataContext);
-          let ORG_DATA = dataContext.ORG_DATA;
-          let ORG_DATA_CMMC = dataContext.ORG_DATA_CMMC;
-          let ORG_DATA_NONCMMC = dataContext.ORG_DATA_NONCMMC;
+          // Read and execute data.js with error handling
+          let ORG_DATA, ORG_DATA_CMMC, ORG_DATA_NONCMMC;
+          
+          try {
+            const dataContent = fs.readFileSync('data.js', 'utf8');
+            const dataContext = {};
+            vm.createContext(dataContext);
+            vm.runInContext(dataContent, dataContext);
+            ORG_DATA = dataContext.ORG_DATA;
+            ORG_DATA_CMMC = dataContext.ORG_DATA_CMMC;
+            ORG_DATA_NONCMMC = dataContext.ORG_DATA_NONCMMC;
+          } catch (error) {
+            console.log('WARNING: Could not read existing data.js, initializing new structure');
+          }
+          
+          // Initialize if undefined
+          if (!ORG_DATA || typeof ORG_DATA !== 'object') {
+            console.log('Initializing ORG_DATA');
+            ORG_DATA = {
+              "All": {
+                "weeklyProgress": []
+              }
+            };
+          }
+          
+          if (!ORG_DATA_CMMC || typeof ORG_DATA_CMMC !== 'object') {
+            console.log('Initializing ORG_DATA_CMMC');
+            ORG_DATA_CMMC = {
+              "All": {
+                "weeklyProgress": []
+              }
+            };
+          }
+          
+          if (!ORG_DATA_NONCMMC || typeof ORG_DATA_NONCMMC !== 'object') {
+            console.log('Initializing ORG_DATA_NONCMMC');
+            ORG_DATA_NONCMMC = {
+              "All": {
+                "weeklyProgress": []
+              }
+            };
+          }
           
           function getTargetWeekDate(nowDate) {
             const date = new Date(nowDate);
@@ -117,21 +151,13 @@ jobs:
           }
           
           if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.cmmc && CURRENT_WEEK_DATA.cmmc['All']) {
-            if (typeof ORG_DATA_CMMC !== 'undefined') {
-              updateWeekData(ORG_DATA_CMMC, CURRENT_WEEK_DATA.cmmc['All'], 'CMMC Applications');
-            } else {
-              console.log('WARNING: CMMC Applications - ORG_DATA_CMMC not defined in data.js');
-            }
+            updateWeekData(ORG_DATA_CMMC, CURRENT_WEEK_DATA.cmmc['All'], 'CMMC Applications');
           } else {
             console.log('WARNING: CMMC Applications - No data in current-week.js');
           }
           
           if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.noncmmc && CURRENT_WEEK_DATA.noncmmc['All']) {
-            if (typeof ORG_DATA_NONCMMC !== 'undefined') {
-              updateWeekData(ORG_DATA_NONCMMC, CURRENT_WEEK_DATA.noncmmc['All'], 'Non-CMMC Applications');
-            } else {
-              console.log('WARNING: Non-CMMC Applications - ORG_DATA_NONCMMC not defined in data.js');
-            }
+            updateWeekData(ORG_DATA_NONCMMC, CURRENT_WEEK_DATA.noncmmc['All'], 'Non-CMMC Applications');
           } else {
             console.log('WARNING: Non-CMMC Applications - No data in current-week.js');
           }
@@ -144,16 +170,10 @@ jobs:
           output += '// Cutoff: Friday at ' + CUTOFF_HOUR + ':00 UTC\n\n';
           output += '// All Applications (CMMC + Non-CMMC)\n';
           output += 'const ORG_DATA = ' + JSON.stringify(ORG_DATA, null, 4) + ';\n';
-          
-          if (typeof ORG_DATA_CMMC !== 'undefined') {
-            output += '\n// CMMC Applications Data\n';
-            output += 'const ORG_DATA_CMMC = ' + JSON.stringify(ORG_DATA_CMMC, null, 4) + ';\n';
-          }
-          
-          if (typeof ORG_DATA_NONCMMC !== 'undefined') {
-            output += '\n// Non-CMMC Applications Data\n';
-            output += 'const ORG_DATA_NONCMMC = ' + JSON.stringify(ORG_DATA_NONCMMC, null, 4) + ';\n';
-          }
+          output += '\n// CMMC Applications Data\n';
+          output += 'const ORG_DATA_CMMC = ' + JSON.stringify(ORG_DATA_CMMC, null, 4) + ';\n';
+          output += '\n// Non-CMMC Applications Data\n';
+          output += 'const ORG_DATA_NONCMMC = ' + JSON.stringify(ORG_DATA_NONCMMC, null, 4) + ';\n';
           
           fs.writeFileSync('data.js', output, 'utf8');
           
