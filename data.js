@@ -4,4 +4,22 @@
 // Cutoff: Friday at 17:00 UTC
 
 // All Applications (CMMC + Non-CMMC)
-const ORG_DATA = undefined;
+const ORG_DATA = {
+    "All": {
+        "weeklyProgress": []
+    }
+};
+
+// CMMC Applications Data
+const ORG_DATA_CMMC = {
+    "All": {
+        "weeklyProgress": []
+    }
+};
+
+// Non-CMMC Applications Data
+const ORG_DATA_NONCMMC = {
+    "All": {
+        "weeklyProgress": []
+    }
+};
