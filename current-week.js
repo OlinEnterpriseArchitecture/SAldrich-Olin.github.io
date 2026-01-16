@@ -1,4 +1,4 @@
-// Auto-generated from Power BI - fake data
+// Auto-generated from Power BI - fake data 
 // Last updated: 2026-01-16T21:26:56.6824712Z
 
 const CURRENT_WEEK_DATA = {
