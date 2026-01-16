@@ -23,15 +23,26 @@ jobs:
         run: |
           node << 'EOF'
           const fs = require('fs');
+          const vm = require('vm');
           
           const CUTOFF_HOUR = 17;
           const CUTOFF_DAY = 5;
           
+          // Read and execute current-week.js in a proper context
           const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
-          eval(currentWeekContent);
+          const currentWeekContext = {};
+          vm.createContext(currentWeekContext);
+          vm.runInContext(currentWeekContent, currentWeekContext);
+          const CURRENT_WEEK_DATA = currentWeekContext.CURRENT_WEEK_DATA;
           
+          // Read and execute data.js in a proper context
           const dataContent = fs.readFileSync('data.js', 'utf8');
-          eval(dataContent);
+          const dataContext = {};
+          vm.createContext(dataContext);
+          vm.runInContext(dataContent, dataContext);
+          let ORG_DATA = dataContext.ORG_DATA;
+          let ORG_DATA_CMMC = dataContext.ORG_DATA_CMMC;
+          let ORG_DATA_NONCMMC = dataContext.ORG_DATA_NONCMMC;
           
           function getTargetWeekDate(nowDate) {
             const date = new Date(nowDate);
@@ -99,13 +110,13 @@ jobs:
           console.log('Cutoff: Friday at ' + CUTOFF_HOUR + ':00 UTC');
           console.log('================================================');
           
-          if (CURRENT_WEEK_DATA.all && CURRENT_WEEK_DATA.all['All']) {
+          if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.all && CURRENT_WEEK_DATA.all['All']) {
             updateWeekData(ORG_DATA, CURRENT_WEEK_DATA.all['All'], 'All Applications');
           } else {
             console.log('WARNING: All Applications - No data in current-week.js');
           }
           
-          if (CURRENT_WEEK_DATA.cmmc && CURRENT_WEEK_DATA.cmmc['All']) {
+          if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.cmmc && CURRENT_WEEK_DATA.cmmc['All']) {
             if (typeof ORG_DATA_CMMC !== 'undefined') {
               updateWeekData(ORG_DATA_CMMC, CURRENT_WEEK_DATA.cmmc['All'], 'CMMC Applications');
             } else {
@@ -115,7 +126,7 @@ jobs:
             console.log('WARNING: CMMC Applications - No data in current-week.js');
           }
           
-          if (CURRENT_WEEK_DATA.noncmmc && CURRENT_WEEK_DATA.noncmmc['All']) {
+          if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.noncmmc && CURRENT_WEEK_DATA.noncmmc['All']) {
             if (typeof ORG_DATA_NONCMMC !== 'undefined') {
               updateWeekData(ORG_DATA_NONCMMC, CURRENT_WEEK_DATA.noncmmc['All'], 'Non-CMMC Applications');
             } else {
