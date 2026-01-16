@@ -1,8 +1,8 @@
-// Auto-generated from Power BI 
-// Last updated: 2026-01-16T21:53:02.3136753Z
+// Auto-generated from Power BI - fake data
+// Last updated: 2026-01-16T21:26:56.6824712Z
 
 const CURRENT_WEEK_DATA = {
-    date: "2026-01-16T21:53:02.3136792Z",  // Closest Friday
+    date: "2026-01-16T21:26:56.6824751Z",
     all: {
         'All': {
             totalApplications: 819,
@@ -10,6 +10,24 @@ const CURRENT_WEEK_DATA = {
             missingQuality: 385,
             missingApprovals: 365,
             missingSurveys: 403
+        }
+    },
+    cmmc: {
+        'All': {
+            totalApplications: 400,  // Replace with actual data
+            missingMandatory: 150,
+            missingQuality: 180,
+            missingApprovals: 160,
+            missingSurveys: 200
+        }
+    },
+    noncmmc: {
+        'All': {
+            totalApplications: 419,  // Replace with actual data
+            missingMandatory: 196,
+            missingQuality: 205,
+            missingApprovals: 205,
+            missingSurveys: 203
         }
     }
 };
