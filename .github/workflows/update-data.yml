@@ -23,22 +23,22 @@ jobs:
         run: |
           node << 'EOF'
           const fs = require('fs');
-          const vm = require('vm');
           
           const CUTOFF_HOUR = 17;
           const CUTOFF_DAY = 5;
           
-          // Read and execute current-week.js
+          // Read current-week.js and extract CURRENT_WEEK_DATA
           const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
-          console.log('================================================');
-          console.log('RAW current-week.js content:');
-          console.log(currentWeekContent);
-          console.log('================================================');
           
-          const currentWeekContext = {};
-          vm.createContext(currentWeekContext);
-          vm.runInContext(currentWeekContent, currentWeekContext);
-          const CURRENT_WEEK_DATA = currentWeekContext.CURRENT_WEEK_DATA;
+          // Use eval in a safer way by wrapping in a function
+          let CURRENT_WEEK_DATA;
+          try {
+            const wrappedCode = currentWeekContent + '\nCURRENT_WEEK_DATA;';
+            CURRENT_WEEK_DATA = eval(wrappedCode);
+          } catch (error) {
+            console.log('ERROR parsing current-week.js:', error.message);
+            process.exit(1);
+          }
           
           console.log('================================================');
           console.log('PARSED CURRENT_WEEK_DATA:');
@@ -50,12 +50,7 @@ jobs:
           
           try {
             const dataContent = fs.readFileSync('data.js', 'utf8');
-            const dataContext = {};
-            vm.createContext(dataContext);
-            vm.runInContext(dataContent, dataContext);
-            ORG_DATA = dataContext.ORG_DATA;
-            ORG_DATA_CMMC = dataContext.ORG_DATA_CMMC;
-            ORG_DATA_NONCMMC = dataContext.ORG_DATA_NONCMMC;
+            eval(dataContent);
           } catch (error) {
             console.log('WARNING: Could not read existing data.js, initializing new structure');
           }
@@ -154,26 +149,17 @@ jobs:
           console.log('Cutoff: Friday at ' + CUTOFF_HOUR + ':00 UTC');
           console.log('================================================');
           
-          console.log('Checking CURRENT_WEEK_DATA.all:', !!CURRENT_WEEK_DATA?.all);
-          console.log('Checking CURRENT_WEEK_DATA.all.All:', !!CURRENT_WEEK_DATA?.all?.All);
-          
           if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.all && CURRENT_WEEK_DATA.all['All']) {
             updateWeekData(ORG_DATA, CURRENT_WEEK_DATA.all['All'], 'All Applications');
           } else {
             console.log('WARNING: All Applications - No data in current-week.js');
           }
           
-          console.log('Checking CURRENT_WEEK_DATA.cmmc:', !!CURRENT_WEEK_DATA?.cmmc);
-          console.log('Checking CURRENT_WEEK_DATA.cmmc.All:', !!CURRENT_WEEK_DATA?.cmmc?.All);
-          
           if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.cmmc && CURRENT_WEEK_DATA.cmmc['All']) {
             updateWeekData(ORG_DATA_CMMC, CURRENT_WEEK_DATA.cmmc['All'], 'CMMC Applications');
           } else {
             console.log('WARNING: CMMC Applications - No data in current-week.js');
           }
-          
-          console.log('Checking CURRENT_WEEK_DATA.noncmmc:', !!CURRENT_WEEK_DATA?.noncmmc);
-          console.log('Checking CURRENT_WEEK_DATA.noncmmc.All:', !!CURRENT_WEEK_DATA?.noncmmc?.All);
           
           if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.noncmmc && CURRENT_WEEK_DATA.noncmmc['All']) {
             updateWeekData(ORG_DATA_NONCMMC, CURRENT_WEEK_DATA.noncmmc['All'], 'Non-CMMC Applications');
