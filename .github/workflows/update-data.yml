@@ -27,10 +27,8 @@ jobs:
           const CUTOFF_HOUR = 17;
           const CUTOFF_DAY = 5;
           
-          // Read current-week.js and extract CURRENT_WEEK_DATA
+          // Read current-week.js
           const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
-          
-          // Use eval in a safer way by wrapping in a function
           let CURRENT_WEEK_DATA;
           try {
             const wrappedCode = currentWeekContent + '\nCURRENT_WEEK_DATA;';
@@ -40,14 +38,8 @@ jobs:
             process.exit(1);
           }
           
-          console.log('================================================');
-          console.log('PARSED CURRENT_WEEK_DATA:');
-          console.log(JSON.stringify(CURRENT_WEEK_DATA, null, 2));
-          console.log('================================================');
-          
-          // Read and execute data.js with error handling
+          // Read existing data.js
           let ORG_DATA, ORG_DATA_CMMC, ORG_DATA_NONCMMC;
-          
           try {
             const dataContent = fs.readFileSync('data.js', 'utf8');
             eval(dataContent);
@@ -55,32 +47,19 @@ jobs:
             console.log('WARNING: Could not read existing data.js, initializing new structure');
           }
           
+          // Get dates from current week data
+          const startDate = CURRENT_WEEK_DATA.startDate || '2026-01-02';
+          const targetDate = CURRENT_WEEK_DATA.targetDate || '2026-04-03';
+          
           // Initialize if undefined
           if (!ORG_DATA || typeof ORG_DATA !== 'object') {
-            console.log('Initializing ORG_DATA');
-            ORG_DATA = {
-              "All": {
-                "weeklyProgress": []
-              }
-            };
+            ORG_DATA = {};
           }
-          
           if (!ORG_DATA_CMMC || typeof ORG_DATA_CMMC !== 'object') {
-            console.log('Initializing ORG_DATA_CMMC');
-            ORG_DATA_CMMC = {
-              "All": {
-                "weeklyProgress": []
-              }
-            };
+            ORG_DATA_CMMC = {};
           }
-          
           if (!ORG_DATA_NONCMMC || typeof ORG_DATA_NONCMMC !== 'object') {
-            console.log('Initializing ORG_DATA_NONCMMC');
-            ORG_DATA_NONCMMC = {
-              "All": {
-                "weeklyProgress": []
-              }
-            };
+            ORG_DATA_NONCMMC = {};
           }
           
           function getTargetWeekDate(nowDate) {
@@ -95,7 +74,6 @@ jobs:
             }
             
             let daysUntilFriday = (CUTOFF_DAY - dayOfWeek + 7) % 7;
-            
             if (daysUntilFriday === 0 && dayOfWeek === CUTOFF_DAY) {
               daysUntilFriday = 0;
             }
@@ -105,39 +83,50 @@ jobs:
             return thisFriday.toISOString().split('T')[0];
           }
           
-          function updateWeekData(dataset, currentData, datasetName) {
-            if (!dataset || !dataset['All'] || !dataset['All'].weeklyProgress) {
-              console.log('WARNING: ' + datasetName + ' dataset structure invalid, skipping');
-              return;
-            }
-            
+          function updateDataset(dataset, currentData, datasetName) {
             if (!currentData) {
-              console.log('WARNING: ' + datasetName + ' no current week data found, skipping');
+              console.log('WARNING: No data for ' + datasetName);
               return;
             }
             
-            const weekIndex = dataset['All'].weeklyProgress.findIndex(w => w.date === targetWeek);
-            
-            const newWeekData = {
-              date: targetWeek,
-              totalApplications: currentData.totalApplications || 0,
-              missingMandatory: currentData.missingMandatory || 0,
-              missingQuality: currentData.missingQuality || 0,
-              missingApprovals: currentData.missingApprovals || 0,
-              missingSurveys: currentData.missingSurveys || 0
-            };
-            
-            if (weekIndex !== -1) {
-              dataset['All'].weeklyProgress[weekIndex] = newWeekData;
-              console.log('UPDATED: ' + datasetName + ' week ' + targetWeek);
-            } else {
-              dataset['All'].weeklyProgress.push(newWeekData);
-              console.log('ADDED: ' + datasetName + ' week ' + targetWeek);
+            // Process each organization in the current data
+            for (const orgName in currentData) {
+              if (!dataset[orgName]) {
+                dataset[orgName] = {
+                  startDate: startDate,
+                  targetDate: targetDate,
+                  weeklyProgress: []
+                };
+                console.log('Initialized ' + datasetName + ' / ' + orgName);
+              }
+              
+              // Update startDate and targetDate
+              dataset[orgName].startDate = startDate;
+              dataset[orgName].targetDate = targetDate;
+              
+              const weekIndex = dataset[orgName].weeklyProgress.findIndex(w => w.date === targetWeek);
+              
+              const newWeekData = {
+                date: targetWeek,
+                totalApplications: currentData[orgName].totalApplications || 0,
+                missingMandatory: currentData[orgName].missingMandatory || 0,
+                missingQuality: currentData[orgName].missingQuality || 0,
+                missingApprovals: currentData[orgName].missingApprovals || 0,
+                missingSurveys: currentData[orgName].missingSurveys || 0
+              };
+              
+              if (weekIndex !== -1) {
+                dataset[orgName].weeklyProgress[weekIndex] = newWeekData;
+                console.log('UPDATED: ' + datasetName + ' / ' + orgName + ' week ' + targetWeek);
+              } else {
+                dataset[orgName].weeklyProgress.push(newWeekData);
+                console.log('ADDED: ' + datasetName + ' / ' + orgName + ' week ' + targetWeek);
+              }
+              
+              dataset[orgName].weeklyProgress.sort((a, b) => 
+                new Date(a.date) - new Date(b.date)
+              );
             }
-            
-            dataset['All'].weeklyProgress.sort((a, b) => 
-              new Date(a.date) - new Date(b.date)
-            );
           }
           
           const now = new Date();
@@ -146,25 +135,48 @@ jobs:
           console.log('================================================');
           console.log('Current UTC time: ' + now.toISOString());
           console.log('Target week date: ' + targetWeek);
+          console.log('Start date: ' + startDate);
+          console.log('Target date: ' + targetDate);
           console.log('Cutoff: Friday at ' + CUTOFF_HOUR + ':00 UTC');
           console.log('================================================');
           
-          if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.all && CURRENT_WEEK_DATA.all['All']) {
-            updateWeekData(ORG_DATA, CURRENT_WEEK_DATA.all['All'], 'All Applications');
-          } else {
-            console.log('WARNING: All Applications - No data in current-week.js');
-          }
+          updateDataset(ORG_DATA, CURRENT_WEEK_DATA.all, 'All Applications');
+          updateDataset(ORG_DATA_CMMC, CURRENT_WEEK_DATA.cmmc, 'CMMC Applications');
+          updateDataset(ORG_DATA_NONCMMC, CURRENT_WEEK_DATA.noncmmc, 'Non-CMMC Applications');
           
-          if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.cmmc && CURRENT_WEEK_DATA.cmmc['All']) {
-            updateWeekData(ORG_DATA_CMMC, CURRENT_WEEK_DATA.cmmc['All'], 'CMMC Applications');
-          } else {
-            console.log('WARNING: CMMC Applications - No data in current-week.js');
-          }
-          
-          if (CURRENT_WEEK_DATA && CURRENT_WEEK_DATA.noncmmc && CURRENT_WEEK_DATA.noncmmc['All']) {
-            updateWeekData(ORG_DATA_NONCMMC, CURRENT_WEEK_DATA.noncmmc['All'], 'Non-CMMC Applications');
-          } else {
-            console.log('WARNING: Non-CMMC Applications - No data in current-week.js');
+          // Format output with single quotes
+          function formatJS(obj, indent = 4) {
+            const spaces = ' '.repeat(indent);
+            let result = '{\n';
+            
+            const keys = Object.keys(obj);
+            keys.forEach((key, index) => {
+              result += spaces + "'" + key + "': {\n";
+              result += spaces + '    startDate: \'' + obj[key].startDate + '\',\n';
+              result += spaces + '    targetDate: \'' + obj[key].targetDate + '\',\n';
+              result += spaces + '    weeklyProgress: [\n';
+              
+              obj[key].weeklyProgress.forEach((week, wIndex) => {
+                result += spaces + '        {\n';
+                result += spaces + '            date: \'' + week.date + '\',\n';
+                result += spaces + '            totalApplications: ' + week.totalApplications + ',\n';
+                result += spaces + '            missingMandatory: ' + week.missingMandatory + ',\n';
+                result += spaces + '            missingQuality: ' + week.missingQuality + ',\n';
+                result += spaces + '            missingApprovals: ' + week.missingApprovals + ',\n';
+                result += spaces + '            missingSurveys: ' + week.missingSurveys + '\n';
+                result += spaces + '        }';
+                if (wIndex < obj[key].weeklyProgress.length - 1) result += ',';
+                result += '\n';
+              });
+              
+              result += spaces + '    ]\n';
+              result += spaces + '}';
+              if (index < keys.length - 1) result += ',';
+              result += '\n';
+            });
+            
+            result += '}';
+            return result;
           }
           
           const timestamp = now.toISOString();
@@ -174,11 +186,11 @@ jobs:
           output += '// Target week: ' + targetWeek + '\n';
           output += '// Cutoff: Friday at ' + CUTOFF_HOUR + ':00 UTC\n\n';
           output += '// All Applications (CMMC + Non-CMMC)\n';
-          output += 'const ORG_DATA = ' + JSON.stringify(ORG_DATA, null, 4) + ';\n';
-          output += '\n// CMMC Applications Data\n';
-          output += 'const ORG_DATA_CMMC = ' + JSON.stringify(ORG_DATA_CMMC, null, 4) + ';\n';
-          output += '\n// Non-CMMC Applications Data\n';
-          output += 'const ORG_DATA_NONCMMC = ' + JSON.stringify(ORG_DATA_NONCMMC, null, 4) + ';\n';
+          output += 'const ORG_DATA = ' + formatJS(ORG_DATA) + ';\n\n';
+          output += '// CMMC Applications Data\n';
+          output += 'const ORG_DATA_CMMC = ' + formatJS(ORG_DATA_CMMC) + ';\n\n';
+          output += '// Non-CMMC Applications Data\n';
+          output += 'const ORG_DATA_NONCMMC = ' + formatJS(ORG_DATA_NONCMMC) + ';\n';
           
           fs.writeFileSync('data.js', output, 'utf8');
           
