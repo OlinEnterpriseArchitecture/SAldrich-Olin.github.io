@@ -27,6 +27,10 @@ jobs:
           const CUTOFF_HOUR = 17;
           const CUTOFF_DAY = 5;
           
+          // Default dates (used only for NEW organizations)
+          const DEFAULT_START_DATE = '2026-01-02';
+          const DEFAULT_TARGET_DATE = '2026-04-03';
+          
           // Read current-week.js
           const currentWeekContent = fs.readFileSync('current-week.js', 'utf8');
           let CURRENT_WEEK_DATA;
@@ -46,10 +50,6 @@ jobs:
           } catch (error) {
             console.log('WARNING: Could not read existing data.js, initializing new structure');
           }
-          
-          // Get dates from current week data
-          const startDate = CURRENT_WEEK_DATA.startDate || '2026-01-02';
-          const targetDate = CURRENT_WEEK_DATA.targetDate || '2026-04-03';
           
           // Initialize if undefined
           if (!ORG_DATA || typeof ORG_DATA !== 'object') {
@@ -92,17 +92,17 @@ jobs:
             // Process each organization in the current data
             for (const orgName in currentData) {
               if (!dataset[orgName]) {
+                // New organization - use defaults
                 dataset[orgName] = {
-                  startDate: startDate,
-                  targetDate: targetDate,
+                  startDate: DEFAULT_START_DATE,
+                  targetDate: DEFAULT_TARGET_DATE,
                   weeklyProgress: []
                 };
-                console.log('Initialized ' + datasetName + ' / ' + orgName);
+                console.log('Initialized ' + datasetName + ' / ' + orgName + ' with default dates');
               }
               
-              // Update startDate and targetDate
-              dataset[orgName].startDate = startDate;
-              dataset[orgName].targetDate = targetDate;
+              // PRESERVE existing startDate and targetDate
+              // Don't overwrite them - user can manually edit these in data.js
               
               const weekIndex = dataset[orgName].weeklyProgress.findIndex(w => w.date === targetWeek);
               
@@ -135,8 +135,8 @@ jobs:
           console.log('================================================');
           console.log('Current UTC time: ' + now.toISOString());
           console.log('Target week date: ' + targetWeek);
-          console.log('Start date: ' + startDate);
-          console.log('Target date: ' + targetDate);
+          console.log('Default start date: ' + DEFAULT_START_DATE);
+          console.log('Default target date: ' + DEFAULT_TARGET_DATE);
           console.log('Cutoff: Friday at ' + CUTOFF_HOUR + ':00 UTC');
           console.log('================================================');
           
