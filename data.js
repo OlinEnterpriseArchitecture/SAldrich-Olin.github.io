@@ -6,6 +6,8 @@
 // All Applications (CMMC + Non-CMMC)
 const ORG_DATA = {
     "All": {
+        startDate: '2026-01-02',
+        targetDate: '2026-04-03',
         "weeklyProgress": [
             {
                 "date": "2026-01-23",
@@ -22,6 +24,8 @@ const ORG_DATA = {
 // CMMC Applications Data
 const ORG_DATA_CMMC = {
     "All": {
+        startDate: '2026-01-02',
+        targetDate: '2026-04-03',
         "weeklyProgress": [
             {
                 "date": "2026-01-23",
@@ -38,6 +42,8 @@ const ORG_DATA_CMMC = {
 // Non-CMMC Applications Data
 const ORG_DATA_NONCMMC = {
     "All": {
+        startDate: '2026-01-02',
+        targetDate: '2026-04-03',
         "weeklyProgress": [
             {
                 "date": "2026-01-23",
